@@ -2,12 +2,14 @@
 
 namespace Daison\LaravelHorizonCluster\Mod;
 
+use Illuminate\Support\Str;
 use Laravel\Horizon\LuaScripts;
 use Laravel\Horizon\Repositories\RedisMetricsRepository as Base;
 
 class RedisMetricsRepository extends Base
 {
     use PipelineToBlockingTrait;
+    use HashTagTrait;
 
     /**
      * {@inheritDoc}
@@ -75,8 +77,8 @@ class RedisMetricsRepository extends Base
             $this->connection()->eval(
                 LuaScripts::updateMetrics(),
                 2,
-                'job:' . $job,
-                'measured_jobs',
+                "job:{$this->getHashTag()}:{$job}",
+                "measured_jobs:{$this->getHashTag()}",
                 str_replace(',', '.', (string) $runtime)
             );
 
@@ -84,8 +86,8 @@ class RedisMetricsRepository extends Base
         }
 
         $this->updateMetrics(
-            'job:' . $job,
-            'measured_jobs',
+            "job:{$this->getHashTag()}:{$job}",
+            "measured_jobs:{$this->getHashTag()}",
             str_replace(',', '.', (string) $runtime),
         );
     }
@@ -95,12 +97,13 @@ class RedisMetricsRepository extends Base
      */
     public function incrementQueue($queue, $runtime): void
     {
+
         if (config('horizon.eval.increment_queue', true)) {
             $this->connection()->eval(
                 LuaScripts::updateMetrics(),
                 2,
-                'queue:' . $queue,
-                'measured_queues',
+                "queue:{$this->getHashTag()}:{$queue}",
+                "measured_queues:{$this->getHashTag()}",
                 str_replace(',', '.', (string) $runtime)
             );
 
@@ -108,9 +111,50 @@ class RedisMetricsRepository extends Base
         }
 
         $this->updateMetrics(
-            'queue:' . $queue,
-            'measured_queues',
+            "queue:{$this->getHashTag()}:{$queue}",
+            "measured_queues:{$this->getHashTag()}",
             str_replace(',', '.', (string) $runtime),
         );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function measuredQueues(): array
+    {
+        $queues = (array) $this->connection()->smembers("measured_queues:{$this->getHashTag()}");
+
+        $pattern = '/queue:'.$this->getHashTag().':(.*)/';
+
+        return collect($queues)
+            ->map(fn ($class) => preg_match($pattern, $class, $matches) ? $matches[1] : $class)
+            ->sort()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function clear(): void
+    {
+        $this->forget('last_snapshot_at');
+        $this->forget("measured_jobs:{$this->getHashTag()}");
+        $this->forget("measured_queues:{$this->getHashTag()}");
+        $this->forget('metrics:snapshot');
+
+        foreach (['queue:*', 'job:*', 'snapshot:*'] as $pattern) {
+            $cursor = null;
+
+            do {
+                [$cursor, $keys] = $this->connection()->scan(
+                    $cursor ?? 0, ['match' => config('horizon.prefix').$pattern]
+                );
+
+                foreach ($keys ?? [] as $key) {
+                    $this->forget(Str::after($key, config('horizon.prefix')));
+                }
+            } while ($cursor > 0);
+        }
     }
 }
