@@ -10,9 +10,9 @@ class RedisMetricsRepository extends Base
     use PipelineToBlockingTrait;
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
-    protected function baseSnapshotData($key)
+    protected function baseSnapshotData($key): array
     {
         /*
         $responses = $this->connection()->transaction(function ($trans) use ($key) {
@@ -67,9 +67,9 @@ class RedisMetricsRepository extends Base
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
-    public function incrementJob($job, $runtime)
+    public function incrementJob($job, $runtime): void
     {
         if (config('horizon.eval.increment_job', true)) {
             $this->connection()->eval(
@@ -91,9 +91,9 @@ class RedisMetricsRepository extends Base
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
-    public function incrementQueue($queue, $runtime)
+    public function incrementQueue($queue, $runtime): void
     {
         if (config('horizon.eval.increment_queue', true)) {
             $this->connection()->eval(

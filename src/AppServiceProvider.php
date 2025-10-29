@@ -2,7 +2,6 @@
 
 namespace Daison\LaravelHorizonCluster;
 
-use Daison\LaravelHorizonCluster\Mod;
 use Laravel\Horizon\AutoScaler;
 use Laravel\Horizon\Contracts;
 use Laravel\Horizon\HorizonServiceProvider as Base;
@@ -14,7 +13,7 @@ use Laravel\Horizon\Stopwatch;
 class AppServiceProvider extends Base
 {
     /**
-     * All of the service bindings for Horizon.
+     * All the service bindings for Horizon.
      *
      * @var array
      */
@@ -46,7 +45,7 @@ class AppServiceProvider extends Base
      *
      * @return void
      */
-    protected function configure()
+    protected function configure(): void
     {
         if (!config('horizon.reconnect_to_next_node_on_fail', false)) {
             parent::configure();
