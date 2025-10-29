@@ -55,7 +55,7 @@ class AppServiceProvider extends Base
         }
 
         $this->mergeConfigFrom(
-            dirname((new \ReflectionClass(get_parent_class()))->getFileName()) . '/../config/horizon.php',
+            dirname((new \ReflectionClass(get_parent_class($this)))->getFileName()) . '/../config/horizon.php',
             'horizon'
         );
 
